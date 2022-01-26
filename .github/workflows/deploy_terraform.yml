@@ -1,6 +1,20 @@
-name: Deploy Terraform Development
+name: Deploy Terraform
 on:
   workflow_call:
+    inputs:
+      aws_profile:
+        required: true
+        type: string
+      aws_account_id:
+        required: true
+        type: string
+      short_env:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+
     secrets:
       GIT_CREDENTIALS:
         required: true
@@ -16,27 +30,8 @@ on:
         required: true
 
 jobs:
-  # This action is tied to the deploy_functions action, so that's why we are not using push.paths.
-  terraform_changed:
-    name: 'Check Terraform Changes'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 5
-      - uses: marceloprado/has-changed-path@v1
-        id: terraform_changed
-        with:
-          paths: terraform
-
-      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
-
-    outputs:
-      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-
   terraform:
-    name: Deploy Terraform Development
+    name: Deploy Terraform
     needs: terraform_changed
     if: ${{ needs.terraform_changed.outputs.terraform_changed == 'true'}}
     runs-on: ubuntu-latest
@@ -50,6 +45,8 @@ jobs:
         working-directory: ${{ env.tf_actions_working_dir }}
     steps:
       - uses: actions/checkout@v2
+        with:
+          branch: ${{ inputs.branch }}
       - uses: hashicorp/setup-terraform@v1
       - uses: actions/cache@v2
         with:
@@ -62,14 +59,14 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile terraform
           aws configure set region us-east-1 --profile terraform
           aws_assume=($(aws sts assume-role \
-              --role-arn "arn:aws:iam::822236045867:role/cicd" \
+              --role-arn "arn:aws:iam::${{ inputs.aws_account_id }}:role/cicd" \
               --role-session-name "ci" \
               --profile terraform \
               --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
               --output text))
-          aws configure set aws_access_key_id "${aws_assume[0]}" --profile development
-          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile development
-          aws configure set aws_session_token "${aws_assume[2]}" --profile development
+          aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.aws_profile }}
+          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.aws_profile }}
+          aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.aws_profile }}
 
       - name: Setup SSH Keys and known_hosts
         env:
@@ -89,14 +86,14 @@ jobs:
       - run: lerna bootstrap
 
       - name: Get packages environment variables
-        run: lerna run pull-env:dev
+        run: lerna run pull-env:${{ inputs.short_env }}
         continue-on-error: true
         
       - name: Get shared environment variables
-        run: yarn pull-shared-env:dev
+        run: yarn pull-shared-env:${{ inputs.short_env }}
         continue-on-error: true
 
       - run: terraform init
-      - run: terraform workspace select development
+      - run: terraform workspace select ${{ inputs.aws_profile }}
         timeout-minutes: 1
       - run: terraform apply --auto-approve
