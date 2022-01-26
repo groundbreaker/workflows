@@ -2,16 +2,7 @@ name: Deploy Terraform
 on:
   workflow_call:
     inputs:
-      aws_profile:
-        required: true
-        type: string
-      aws_account_id:
-        required: true
-        type: string
-      short_env:
-        required: true
-        type: string
-      branch:
+      environment: # development | release | production
         required: true
         type: string
 
@@ -37,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          branch: ${{ inputs.branch }}
+          ref: github.ref_name
           fetch-depth: 5
 
       - uses: marceloprado/has-changed-path@v1
@@ -66,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          branch: ${{ inputs.branch }}
+          ref: github.ref_name
 
       - uses: hashicorp/setup-terraform@v1
 
@@ -75,20 +66,37 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
 
+      - name: Set Enviroment Variables
+        run: |
+          case ${{ inputs.environment }} in
+            development)
+              echo "aws_role_arn=arn:aws:iam::822236045867:role/cicd" >> $GITHUB_ENV
+              echo "short_env=dev" >> $GITHUB_ENV
+            ;;
+            release)
+              echo "aws_role_arn=arn:aws:iam::453497214348:role/cicd" >> $GITHUB_ENV
+              echo "short_env=release" >> $GITHUB_ENV
+            ;;
+            production)
+              echo "aws_role_arn=arn:aws:iam::140981404942:role/cicd" >> $GITHUB_ENV
+              echo "short_env=prod" >> $GITHUB_ENV
+            ;;
+          esac
+
       - name: Setup AWS Credentials
         run: |
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile terraform
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile terraform
           aws configure set region us-east-1 --profile terraform
           aws_assume=($(aws sts assume-role \
-              --role-arn "arn:aws:iam::${{ inputs.aws_account_id }}:role/cicd" \
+              --role-arn "${{ env.aws_role_arn }}" \
               --role-session-name "ci" \
               --profile terraform \
               --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
               --output text))
-          aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.aws_profile }}
-          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.aws_profile }}
-          aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.aws_profile }}
+          aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.environment }}
+          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.environment }}
+          aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.environment }}
 
       - name: Setup SSH Keys and known_hosts
         env:
@@ -108,14 +116,14 @@ jobs:
       - run: lerna bootstrap
 
       - name: Get packages environment variables
-        run: lerna run pull-env:${{ inputs.short_env }}
+        run: lerna run pull-env:${{ env.short_env }}
         continue-on-error: true
         
       - name: Get shared environment variables
-        run: yarn pull-shared-env:${{ inputs.short_env }}
+        run: yarn pull-shared-env:${{ env.short_env }}
         continue-on-error: true
 
       - run: terraform init
-      - run: terraform workspace select ${{ inputs.aws_profile }}
+      - run: terraform workspace select ${{ env.aws_profile }}
         timeout-minutes: 1
       - run: terraform apply --auto-approve

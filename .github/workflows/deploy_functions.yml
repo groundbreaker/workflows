@@ -2,19 +2,7 @@ name: Deploy Functions
 on:
   workflow_call:
     inputs:
-      aws_profile:
-        required: true
-        type: string
-      aws_account_id:
-        required: true
-        type: string
-      short_env:
-        required: true
-        type: string
-      build_since:
-        required: true
-        type: string
-      branch:
+      environment: # development | release | production
         required: true
         type: string
 
@@ -35,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          branch: ${{ inputs.branch }}
+          ref: github.ref_name
           fetch-depth: 5
 
       - uses: marceloprado/has-changed-path@v1
@@ -61,12 +49,30 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          branch: ${{ inputs.branch }}
+          ref: github.ref_name
+
       - name: Cache node_modules
         uses: actions/cache@v2
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
+
+      - name: Set Enviroment Variables
+        run: |
+          case ${{ inputs.environment }} in
+            development)
+              echo "aws_role_arn=arn:aws:iam::822236045867:role/cicd" >> $GITHUB_ENV
+              echo "short_env=dev" >> $GITHUB_ENV
+            ;;
+            release)
+              echo "aws_role_arn=arn:aws:iam::453497214348:role/cicd" >> $GITHUB_ENV
+              echo "short_env=release" >> $GITHUB_ENV
+            ;;
+            production)
+              echo "aws_role_arn=arn:aws:iam::140981404942:role/cicd" >> $GITHUB_ENV
+              echo "short_env=prod" >> $GITHUB_ENV
+            ;;
+          esac
 
       - name: Setup AWS Credentials
         run: |
@@ -74,14 +80,14 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile terraform
           aws configure set region us-east-1 --profile terraform
           aws_assume=($(aws sts assume-role \
-              --role-arn "arn:aws:iam::${{ inputs.aws_account_id }}:role/cicd" \
+              --role-arn "${{ env.aws_role_arn }}" \
               --role-session-name "ci" \
               --profile terraform \
               --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
               --output text))
-          aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.aws_profile }}
-          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.aws_profile }}
-          aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.aws_profile }}
+          aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.environment }}
+          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.environment }}
+          aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.environment }}
 
       # https://github.com/aws/aws-cli/issues/5262
       - name: Configure AWS Region
@@ -93,7 +99,7 @@ jobs:
         run: lerna run build:common
 
       - name: Build modified packages
-        run: lerna run build --since ${{ inputs.build_since }} --exclude-dependents
+        run: lerna run build --since origin/${{ github.ref_name }}~1 --exclude-dependents
 
       - name: Deploy modified packages
-        run: lerna run deploy:${{ inputs.short_env }} --since ${{ inputs.build_since }} --exclude-dependents
+        run: lerna run deploy:${{ inputs.short_env }} --since origin/${{ github.ref_name }}~1 --exclude-dependents
