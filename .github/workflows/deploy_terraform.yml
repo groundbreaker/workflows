@@ -31,7 +31,7 @@ on:
 
 jobs:
   terraform_changed:
-    name: 'Check TF Changes'
+    name: 'Check Terraform Changes'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
