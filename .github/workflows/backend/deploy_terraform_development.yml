@@ -1,0 +1,102 @@
+name: Deploy Terraform Development
+on:
+  workflow_call:
+    secrets:
+      GIT_CREDENTIALS:
+        required: true
+      NPM_AUTH_TOKEN:
+        required: true
+      AWS_OPS_BUCKET:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      PRIVATE_KEY:
+        required: true
+
+jobs:
+  # This action is tied to the deploy_functions action, so that's why we are not using push.paths.
+  terraform_changed:
+    name: 'Check Terraform Changes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 5
+      - uses: marceloprado/has-changed-path@v1
+        id: terraform_changed
+        with:
+          paths: terraform
+
+      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
+
+    outputs:
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+
+  terraform:
+    name: Deploy Terraform Development
+    needs: terraform_changed
+    if: ${{ needs.terraform_changed.outputs.terraform_changed == 'true'}}
+    runs-on: ubuntu-latest
+    env:
+      tf_actions_working_dir: ./terraform
+      GITHUB_TOKEN: ${{ secrets.GIT_CREDENTIALS }}
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      AWS_OPS_BUCKET: ${{ secrets.AWS_OPS_BUCKET }}
+    defaults:
+      run:
+        working-directory: ${{ env.tf_actions_working_dir }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+
+      - name: Setup AWS Credentials
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile terraform
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile terraform
+          aws configure set region us-east-1 --profile terraform
+          aws_assume=($(aws sts assume-role \
+              --role-arn "arn:aws:iam::822236045867:role/cicd" \
+              --role-session-name "ci" \
+              --profile terraform \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+              --output text))
+          aws configure set aws_access_key_id "${aws_assume[0]}" --profile development
+          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile development
+          aws configure set aws_session_token "${aws_assume[2]}" --profile development
+
+      - name: Setup SSH Keys and known_hosts
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        run: |
+          SSH_PATH="$HOME/.ssh"
+          mkdir -p "$SSH_PATH"
+          touch "$SSH_PATH/known_hosts"
+          echo "$PRIVATE_KEY" > "$SSH_PATH/id_rsa"
+          chmod 700 "$SSH_PATH"
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          chmod 600 "$SSH_PATH/known_hosts"
+          chmod 600 "$SSH_PATH/id_rsa"
+          eval $(ssh-agent)
+          ssh-add "$SSH_PATH/id_rsa"
+
+      - run: lerna bootstrap
+
+      - name: Get packages environment variables
+        run: lerna run pull-env:dev
+        continue-on-error: true
+        
+      - name: Get shared environment variables
+        run: yarn pull-shared-env:dev
+        continue-on-error: true
+
+      - run: terraform init
+      - run: terraform workspace select development
+        timeout-minutes: 1
+      - run: terraform apply --auto-approve
