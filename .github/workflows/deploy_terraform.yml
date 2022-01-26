@@ -30,6 +30,26 @@ on:
         required: true
 
 jobs:
+  terraform_changed:
+    name: 'Check TF Changes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          branch: ${{ inputs.branch }}
+          fetch-depth: 5
+
+      - uses: marceloprado/has-changed-path@v1
+        id: terraform_changed
+        with:
+          paths: terraform
+
+      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
+
+    outputs:
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+
   terraform:
     name: Deploy Terraform
     needs: terraform_changed
@@ -47,7 +67,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           branch: ${{ inputs.branch }}
+
       - uses: hashicorp/setup-terraform@v1
+
       - uses: actions/cache@v2
         with:
           path: '**/node_modules'
