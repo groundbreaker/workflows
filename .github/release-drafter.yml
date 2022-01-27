@@ -1,0 +1,48 @@
+name-template: '$RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+categories:
+  - title: ':rocket: Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+      - 'feat'
+  - title: ':bug: Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: ':wrench: Maintenance'
+    labels:
+      - 'chore'
+      - 'ci'
+      - 'build'
+      - 'perf'
+      - 'improvement'
+      - 'style'
+      - 'test'
+  - title: ':hammer_and_wrench: Refactor'
+    labels:
+      - 'refact'
+      - 'refactor'
+  - title: ':notebook: Docs'
+    label: 'docs'
+  - title: ':robot: Automation'
+    labels:
+      - 'automation'
+      - 'dependencies'
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+template: |
+  ## Changes
+
+  $CHANGES
