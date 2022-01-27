@@ -1,0 +1,5 @@
+name: 'Git Flow Enforcer'
+description: 'Check if Git Flow is being followed correctly'
+runs:
+  using: 'node12'
+  main: 'index.js'

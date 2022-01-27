@@ -1,0 +1,14 @@
+name: CI
+on: workflow_call
+jobs:
+  git-flow:
+    name: Check Git Flow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: ./actions/git-flow-enforcer
+
+  setup:
+

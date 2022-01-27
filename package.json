@@ -1,0 +1,22 @@
+{
+  "name": "workflows",
+  "version": "0.0.1",
+  "description": "Groundbreaker's Workflows",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/groundbreaker/workflows.git"
+  },
+  "author": "Groundbreaker Engineering",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/groundbreaker/workflows/issues"
+  },
+  "homepage": "https://github.com/groundbreaker/workflows#readme",
+  "devDependencies": {
+  },
+  "dependencies": {
+    "@actions/core": "^1.6.0",
+    "@actions/github": "^5.0.0"
+  }
+}
