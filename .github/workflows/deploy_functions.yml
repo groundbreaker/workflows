@@ -23,7 +23,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v2
   #       with:
-  #         ref: github.ref_name
+  #         ref: ${{ github.ref_name }}
   #         fetch-depth: 5
 
   #     - uses: marceloprado/has-changed-path@v1
@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: github.ref_name
+          ref: ${{ github.ref_name }}
 
       - name: Cache node_modules
         uses: actions/cache@v2

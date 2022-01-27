@@ -28,7 +28,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v2
   #       with:
-  #         ref: github.ref_name
+  #         ref: ${{ github.ref_name }}
   #         fetch-depth: 5
 
   #     - uses: marceloprado/has-changed-path@v1
@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: github.ref_name
+          ref: ${{ github.ref_name }}
 
       - uses: hashicorp/setup-terraform@v1
 
