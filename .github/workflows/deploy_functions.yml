@@ -58,7 +58,7 @@ jobs:
           key: modules-${{ hashFiles('./yarn.lock') }}
 
       - name: Generate and publish release
-        if: inputs.environment = 'development'
+        if: ${{ inputs.environment }} == 'development'
         uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
