@@ -17,29 +17,29 @@ on:
         required: true
 
 jobs:
-  # code-changed:
-  #   name: 'Check Code Changes'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         ref: ${{ github.ref_name }}
-  #         fetch-depth: 5
+  code-changed:
+    name: 'Check Code Changes'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 5
 
-  #     - uses: marceloprado/has-changed-path@v1
-  #       id: code-changed
-  #       with:
-  #         paths: api consumers shared/common shared/config
+      - uses: marceloprado/has-changed-path@v1
+        id: code-changed
+        with:
+          paths: api consumers shared/common shared/config
 
-  #     - run: echo Has any code been updated? - ${{ steps.code-changed.outputs.changed }}
+      - run: echo Has any code been updated? - ${{ steps.code-changed.outputs.changed }}
 
-  #   outputs:
-  #     code-changed: ${{ steps.code-changed.outputs.changed }}
+    outputs:
+      code-changed: ${{ steps.code-changed.outputs.changed }}
 
   deploy:
     name: 'Deploy Changed Functions'
-    # needs: [code-changed]
-    # if: ${{ needs.code-changed.outputs.code-changed == 'true'}}
+    needs: [code-changed]
+    if: ${{ needs.code-changed.outputs.code-changed == 'true'}}
     timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
