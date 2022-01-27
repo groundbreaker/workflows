@@ -124,6 +124,6 @@ jobs:
         continue-on-error: true
 
       - run: terraform init
-      - run: terraform workspace select ${{ env.aws_profile }}
+      - run: terraform workspace select ${{ inputs.environment }}
         timeout-minutes: 1
       - run: terraform apply --auto-approve
