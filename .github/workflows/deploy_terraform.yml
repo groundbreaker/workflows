@@ -111,7 +111,8 @@ jobs:
         run: yarn pull-shared-env:${{ env.short_env }}
         continue-on-error: true
 
-      - run: terraform init
-      - run: terraform workspace select ${{ inputs.environment }}
-        timeout-minutes: 1
-      - run: terraform apply --auto-approve
+      - name: Apply terraform
+        run: |
+          terraform init
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform apply --auto-approve
