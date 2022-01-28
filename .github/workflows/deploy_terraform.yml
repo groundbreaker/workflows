@@ -23,30 +23,30 @@ on:
         required: true
 
 jobs:
-  # terraform_changed:
-  #   name: 'Check Terraform Changes'
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 5
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         ref: ${{ github.ref_name }}
-  #         fetch-depth: 5
+  terraform_changed:
+    name: 'Check Terraform Changes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 5
 
-  #     - uses: marceloprado/has-changed-path@v1
-  #       id: terraform_changed
-  #       with:
-  #         paths: terraform
+      - uses: marceloprado/has-changed-path@v1
+        id: terraform_changed
+        with:
+          paths: terraform
 
-  #     - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
+      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
 
-  #   outputs:
-  #     terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+    outputs:
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
 
   terraform:
     name: Deploy Terraform
-    # needs: terraform_changed
-    # if: ${{ needs.terraform_changed.outputs.terraform_changed == 'true'}}
+    needs: terraform_changed
+    if: ${{ needs.terraform_changed.outputs.terraform_changed == 'true'}}
     runs-on: ubuntu-latest
     env:
       tf_actions_working_dir: ./terraform
@@ -97,7 +97,7 @@ jobs:
         run: |
           case development in
             development) echo "short_env=dev" $GITHUB_ENV;;
-            release) echo "short_env=release" >> $GITHUB_ENV ;;
+            release) echo "short_env=release" >> $GITHUB_ENV;;
             production) echo "short_env=prod" $GITHUB_ENV;;
           esac
 
