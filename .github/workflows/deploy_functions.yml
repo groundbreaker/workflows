@@ -15,31 +15,33 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
+      AWS_ROLE:
+        required: true
 
 jobs:
-  code-changed:
-    name: 'Check Code Changes'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 5
+  # code-changed:
+  #   name: 'Check Code Changes'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         ref: ${{ github.ref_name }}
+  #         fetch-depth: 5
 
-      - uses: marceloprado/has-changed-path@v1
-        id: code-changed
-        with:
-          paths: api consumers shared/common shared/config
+  #     - uses: marceloprado/has-changed-path@v1
+  #       id: code-changed
+  #       with:
+  #         paths: api consumers shared/common shared/config
 
-      - run: echo Has any code been updated? - ${{ steps.code-changed.outputs.changed }}
+  #     - run: echo Has any code been updated? - ${{ steps.code-changed.outputs.changed }}
 
-    outputs:
-      code-changed: ${{ steps.code-changed.outputs.changed }}
+  #   outputs:
+  #     code-changed: ${{ steps.code-changed.outputs.changed }}
 
   deploy:
     name: 'Deploy Changed Functions'
-    needs: [code-changed]
-    if: ${{ needs.code-changed.outputs.code-changed == 'true'}}
+    # needs: [code-changed]
+    # if: ${{ needs.code-changed.outputs.code-changed == 'true'}}
     timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
@@ -59,48 +61,31 @@ jobs:
           key: modules-${{ hashFiles('./yarn.lock') }}
 
       - name: Generate and publish release
-        if: ${{ inputs.environment }} == 'production'
+        # if: ${{ inputs.environment }} == 'production'
+        if: ${{ inputs.environment }} == 'development'
         uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
 
-      - name: Set Enviroment Variables
-        run: |
-          case ${{ inputs.environment }} in
-            development)
-              echo "aws_role_arn=arn:aws:iam::822236045867:role/cicd" >> $GITHUB_ENV
-              echo "short_env=dev" >> $GITHUB_ENV
-            ;;
-            release)
-              echo "aws_role_arn=arn:aws:iam::453497214348:role/cicd" >> $GITHUB_ENV
-              echo "short_env=release" >> $GITHUB_ENV
-            ;;
-            production)
-              echo "aws_role_arn=arn:aws:iam::140981404942:role/cicd" >> $GITHUB_ENV
-              echo "short_env=prod" >> $GITHUB_ENV
-            ;;
-          esac
-
       - name: Setup AWS Credentials
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile terraform
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile terraform
-          aws configure set region us-east-1 --profile terraform
-          aws_assume=($(aws sts assume-role \
-              --role-arn "${{ env.aws_role_arn }}" \
-              --role-session-name "ci" \
-              --profile terraform \
-              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
-              --output text))
-          aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.environment }}
-          aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.environment }}
-          aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.environment }}
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-duration-seconds: 1200
+          role-session-name: ${{ inputs.environment }}
 
-      # https://github.com/aws/aws-cli/issues/5262
-      - name: Configure AWS Region
-        run: echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+      - name: Set Short Env
+        run: |
+          case development in
+            development) echo "short_env=dev" $GITHUB_ENV;;
+            release) echo "short_env=release" >> $GITHUB_ENV ;;
+            production) echo "short_env=prod" $GITHUB_ENV;;
+          esac
 
       - run: lerna bootstrap
       
@@ -111,4 +96,4 @@ jobs:
         run: lerna run build --since origin/${{ github.ref_name }}~1 --exclude-dependents
 
       - name: Deploy modified packages
-        run: lerna run deploy:${{ inputs.short_env }} --since origin/${{ github.ref_name }}~1 --exclude-dependents
+        run: lerna run deploy:${{ env.short_env }} --since origin/${{ github.ref_name }}~1 --exclude-dependents
