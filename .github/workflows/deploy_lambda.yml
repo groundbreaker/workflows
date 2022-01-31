@@ -53,9 +53,9 @@ jobs:
       terraform_changed: true
       code_changed: true
 
-  code_changed:
+  terraform:
     name: Terraform
-    needs: [repo_changed, terraform]
+    needs: [repo_changed]
     if: ${{ needs.repo_changed.outputs.terraform_changed == 'true'}}
     runs-on: ubuntu-latest
     env:
@@ -129,7 +129,7 @@ jobs:
 
   deploy:
     name: 'Functions'
-    needs: [repo_changed]
+    needs: [repo_changed, terraform]
     if: ${{ needs.repo_changed.outputs.code_changed == 'true'}}
     timeout-minutes: 5
     runs-on: ubuntu-latest
