@@ -41,8 +41,8 @@ jobs:
           ref: master
 
       - name: Generate and publish release
-        if: ${{ inputs.environment }} == production
         uses: release-drafter/release-drafter@v5
+        if: inputs.environment == 'production'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
