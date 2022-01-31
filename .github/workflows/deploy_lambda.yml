@@ -23,8 +23,8 @@ on:
         required: true
 
 jobs:
-  repo_changed:
-    name: 'Check Repository Changes'
+  changes:
+    name: 'Check Changes'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -48,15 +48,13 @@ jobs:
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
 
     outputs:
-      # terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      # code_changed: ${{ steps.code_changed.outputs.changed }}
-      terraform_changed: true
-      code_changed: true
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      code_changed: ${{ steps.code_changed.outputs.changed }}
 
   terraform:
     name: Terraform
-    needs: [repo_changed]
-    if: ${{ needs.repo_changed.outputs.terraform_changed == 'true'}}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.terraform_changed == 'true'}}
     runs-on: ubuntu-latest
     env:
       tf_actions_working_dir: ./terraform
@@ -129,8 +127,8 @@ jobs:
 
   deploy:
     name: 'Functions'
-    needs: [repo_changed, terraform]
-    if: ${{ needs.repo_changed.outputs.code_changed == 'true'}}
+    needs: [changes, terraform]
+    if: ${{ needs.changes.outputs.code_changed == 'true'}}
     timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
