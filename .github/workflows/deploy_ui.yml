@@ -26,7 +26,6 @@ on:
         required: true
 
 env:
-  GROUNDBREAKER_ENVIRONMENT: ${{ inputs.environment }}
   NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
 jobs:
@@ -63,7 +62,11 @@ jobs:
           aws-region: us-east-1
 
       - name: Pull environment variables
-        run: npm run pull-env:ci
+        run: |
+          npm run pull-env:ci
+          cat .env.${{ inputs.enviroment }} > .env.production
+        env: 
+          GROUNDBREAKER_ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Build App
         run: npm run build
