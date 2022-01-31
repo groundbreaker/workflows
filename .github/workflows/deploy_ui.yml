@@ -38,7 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: master
+          ref: ${{ github.ref_name }}
 
       - name: Generate and publish release
         uses: release-drafter/release-drafter@v5
