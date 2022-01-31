@@ -55,7 +55,7 @@ jobs:
 
   code_changed:
     name: Terraform
-    needs: repo_changed
+    needs: [repo_changed, terraform]
     if: ${{ needs.repo_changed.outputs.terraform_changed == 'true'}}
     runs-on: ubuntu-latest
     env:
