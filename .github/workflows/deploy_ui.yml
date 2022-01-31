@@ -100,4 +100,4 @@ jobs:
             --content-type "text/html"
 
       - name: Invalidate cache
-        run: aws cloudfront create-invalidation --distribution-id ${{ inputs.distribution_id }} --paths "/${{ inputs.cf_path }}/ *"
+        run: aws cloudfront create-invalidation --distribution-id ${{ inputs.distribution_id }} --paths "/${{ inputs.cf_path }}/*"
