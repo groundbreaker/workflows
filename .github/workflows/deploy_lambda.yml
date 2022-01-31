@@ -103,10 +103,11 @@ jobs:
 
       - name: Set Short Env
         run: |
-          case development in
-            development) echo "short_env=dev" $GITHUB_ENV;;
-            release) echo "short_env=release" >> $GITHUB_ENV;;
-            production) echo "short_env=prod" $GITHUB_ENV;;
+          case ${{ inputs.environment }} in
+            development) echo "short_env=dev" >> $GITHUB_ENV ;;
+            release) echo "short_env=release" >> $GITHUB_ENV ;;
+            production) echo "short_env=prod" >> $GITHUB_ENV ;;
+            *) echo "Invalid environment" && exit 1 ;;
           esac
 
       - run: lerna bootstrap
@@ -125,10 +126,10 @@ jobs:
 
       - run: terraform apply --auto-approve
 
-  deploy:
+  functions:
     name: 'Functions'
     needs: [changes, terraform]
-    if: ${{ needs.changes.outputs.code_changed == 'true'}}
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
     timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
@@ -167,10 +168,11 @@ jobs:
 
       - name: Set Short Env
         run: |
-          case development in
-            development) echo "short_env=dev" $GITHUB_ENV;;
-            release) echo "short_env=release" >> $GITHUB_ENV;;
-            production) echo "short_env=prod" $GITHUB_ENV;;
+          case ${{ inputs.environment }} in
+            development) echo "short_env=dev" >> $GITHUB_ENV ;;
+            release) echo "short_env=release" >> $GITHUB_ENV ;;
+            production) echo "short_env=prod" >> $GITHUB_ENV ;;
+            *) echo "Invalid environment" && exit 1 ;;
           esac
 
       - run: lerna bootstrap
