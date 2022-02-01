@@ -84,9 +84,9 @@ jobs:
       - name: Set s3 bucket on env
         run: |
           case ${{ inputs.environment }} in
-            development) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}"  >> $GITHUB_ENV ;;
-            release) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}"  >> $GITHUB_ENV ;;
-            production) echo "s3_full_path=gb-ui-v2/${{ inputs.portal }}/${{ inputs.cf_path }}"  >> $GITHUB_ENV ;;
+            development) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            release) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            production) echo "s3_full_path=gb-ui-v2/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
             *) echo "Invalid environment" && exit 1 ;;
           esac
 
