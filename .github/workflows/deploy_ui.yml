@@ -41,18 +41,24 @@ jobs:
 
       - name: Generate and publish release
         uses: release-drafter/release-drafter@v5
-        if: inputs.environment == 'production'
+        if: inputs.environment == 'development'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
+
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
 
       - uses: actions/setup-node@v1
         with:
           node-version: 14
 
       - name: Install Dependencies
-        run: npm ci --no-optional
+        run: npm install --no-optional
 
       - name: Configure AWS Tools Credentials
         uses: aws-actions/configure-aws-credentials@v1
