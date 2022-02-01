@@ -41,7 +41,7 @@ jobs:
 
       - name: Generate and publish release
         uses: release-drafter/release-drafter@v5
-        if: inputs.environment == 'development'
+        if: inputs.environment == 'production'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -50,8 +50,8 @@ jobs:
       - name: Cache node_modules
         uses: actions/cache@v2
         with:
-          path: '**/node_modules'
-          key: modules-${{ hashFiles('./yarn.lock') }}
+          path: './node_modules'
+          key: modules-${{ hashFiles('./package-lock.json') }}
 
       - uses: actions/setup-node@v1
         with:

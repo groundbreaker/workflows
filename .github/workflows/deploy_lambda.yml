@@ -142,12 +142,6 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 5
 
-      - name: Cache node_modules
-        uses: actions/cache@v2
-        with:
-          path: '**/node_modules'
-          key: modules-${{ hashFiles('./yarn.lock') }}
-
       - name: Generate and publish release
         if: inputs.environment == 'production'
         uses: release-drafter/release-drafter@v5
@@ -155,6 +149,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
+
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
 
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
