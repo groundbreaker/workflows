@@ -21,6 +21,7 @@ jobs:
       - name: Check origin branch
         id: should_run
         run: |
+          echo ${{ github.head_ref }}
           should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'FA-735') && !startsWith(github.head_ref, 'release') }}
           echo "::set-output name=should_run::$should_run"
 
