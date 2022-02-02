@@ -16,7 +16,7 @@ env:
 
 jobs:
   tests:
-    if: env.SHOULD_RUN
+    if: ${{ env.SHOULD_RUN }}
     name: 'Tests and Coverage'
     runs-on: ubuntu-latest
     env:
@@ -34,7 +34,7 @@ jobs:
       - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
 
   validate_terraform:
-    if: env.SHOULD_RUN
+    if: ${{ env.SHOULD_RUN }}
     name: 'Validate Terraform Code'
     runs-on: ubuntu-latest
     env:
@@ -68,7 +68,7 @@ jobs:
       - run: terraform validate
 
   lint:
-    if: env.SHOULD_RUN
+    if: ${{ env.SHOULD_RUN }}
     name: 'Run ESLint'
     runs-on: 'ubuntu-latest'
     env:
