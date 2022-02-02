@@ -1,6 +1,11 @@
 name: CI Monorepo
 on:
   workflow_call:
+    inputs:
+      head_ref:
+        required: true
+        type: string
+
     secrets:
       NPM_AUTH_TOKEN:
         required: true
@@ -21,24 +26,23 @@ jobs:
       - name: Check origin branch
         id: should_run
         run: |
-          echo ${{ github.head_ref }}
-          should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'FA-735') && !startsWith(github.head_ref, 'release') }}
+          echo ${{ inputs.head_ref }}
+          should_run=${{ (inputs.head_ref != 'main') && (inputs.head_ref != 'FA-735') && !startsWith(inputs.head_ref, 'release') }}
           echo "::set-output name=should_run::$should_run"
 
       - uses: actions/checkout@v2
-        if: ${{ steps.terraform_changed.outputs.should_run }}
+        if: ${{ steps.should_run.outputs.should_run }}
         with:
-          ref: ${{ github.ref_name }}
           fetch-depth: 5
 
       - uses: marceloprado/has-changed-path@v1
-        if: ${{ steps.terraform_changed.outputs.should_run }}
+        if: ${{ steps.should_run.outputs.should_run }}
         id: terraform_changed
         with:
           paths: terraform
 
       - uses: marceloprado/has-changed-path@v1
-        if: ${{ steps.terraform_changed.outputs.should_run }}
+        if: ${{ steps.should_run.outputs.should_run }}
         id: code_changed
         with:
           paths: api consumers shared/common shared/config
