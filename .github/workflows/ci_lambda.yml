@@ -10,6 +10,10 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
+      PRIVATE_KEY:
+        required: true
+      KNOWN_HOSTS:
+        required: true
 
 jobs:
   changes:
@@ -52,9 +56,9 @@ jobs:
       code_changed: true
 
   tests:
+    name: 'Tests and Coverage'
     needs: changes
     if: ${{ needs.changes.outputs.code_changed == 'true' }}
-    name: 'Tests and Coverage'
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
@@ -65,16 +69,16 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
 
-      - run: npx lerna bootstrap
-      - run: npx lerna run build:common
-      - run: npx lerna run test:ci
+      - run: lerna bootstrap
+      - run: lerna run build:common
+      - run: lerna run test:ci
       - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
 
   lint:
+    name: 'Run ESLint'
     needs: changes
     if: ${{ needs.changes.outputs.code_changed == 'true' }}
-    name: 'Run ESLint'
-    runs-on: 'ubuntu-latest'
+    runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     timeout-minutes: 5
@@ -94,9 +98,9 @@ jobs:
       - run: lerna run lint
 
   validate_terraform:
+    name: 'Validate Terraform Code'
     needs: changes
     if: ${{ needs.changes.outputs.terraform_changed == 'true' }}
-    name: 'Validate Terraform Code'
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
