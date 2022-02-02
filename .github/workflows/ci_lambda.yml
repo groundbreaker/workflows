@@ -21,8 +21,7 @@ jobs:
       - name: Check origin branch
         id: should_run
         run: |
-          echo ${{ github.head_ref }}
-          should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'FA-735') && !startsWith(github.head_ref, 'release') }}
+          should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
           echo "::set-output name=should_run::$should_run"
 
       - uses: actions/checkout@v2
@@ -47,8 +46,10 @@ jobs:
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
 
     outputs:
-      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      code_changed: ${{ steps.code_changed.outputs.changed }}
+      # terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      # code_changed: ${{ steps.code_changed.outputs.changed }}
+      terraform_changed: true
+      code_changed: true
 
   tests:
     needs: changes
