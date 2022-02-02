@@ -12,7 +12,7 @@ on:
         required: true
 
 env:
-  SHOULD_RUN: ${{ !(github.head_ref == 'main' || github.head_ref == 'develop' || startsWith(github.head_ref, 'release') }}
+  SHOULD_RUN: ${{ !(github.head_ref == 'main' || github.head_ref == 'develop' || startsWith(github.head_ref, 'release')) }}
 
 jobs:
   tests:
