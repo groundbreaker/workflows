@@ -1,0 +1,90 @@
+name: CI Monorepo
+on:
+  workflow_call:
+    secrets:
+      NPM_AUTH_TOKEN:
+        required: true
+      CODECOV_TOKEN:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+env:
+  SHOULD_RUN: ${{ !(github.head_ref == 'main' || github.head_ref == 'develop' || startsWith(github.head_ref, 'release') }}
+
+jobs:
+  tests:
+    if: env.SHOULD_RUN
+    name: 'Tests and Coverage'
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+
+      - run: npx lerna bootstrap
+      - run: npx lerna run build:common
+      - run: npx lerna run test:ci
+      - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
+
+  validate_terraform:
+    if: env.SHOULD_RUN
+    name: 'Validate Terraform Code'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ENVIRONMENT: development
+    defaults:
+      run:
+        working-directory: ./terraform
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.PRIVATE_KEY }}
+          name: id_rsa
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          if_key_exists: fail
+
+      - run: terraform init
+      - run: terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+      - run: terraform validate
+
+  lint:
+    if: env.SHOULD_RUN
+    name: 'Run ESLint'
+    runs-on: 'ubuntu-latest'
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+
+      - run: lerna bootstrap
+      - name: Build common packages
+        run: lerna run build:common
+      - run: lerna run lint
