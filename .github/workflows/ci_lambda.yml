@@ -1,11 +1,6 @@
 name: CI Monorepo
 on:
   workflow_call:
-    inputs:
-      head_ref:
-        required: true
-        type: string
-
     secrets:
       NPM_AUTH_TOKEN:
         required: true
