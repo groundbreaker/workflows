@@ -11,12 +11,48 @@ on:
       AWS_SECRET_ACCESS_KEY:
         required: true
 
-env:
-  SHOULD_RUN: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
-
 jobs:
+  changes:
+    name: 'Check origin branch and code changes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Only run CI from non-protected branches (avoid CI for backporting)
+      - name: Check origin branch
+        id: should_run
+        run: |
+          should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'FA-735') && !startsWith(github.head_ref, 'release') }}
+          echo "::set-output name=should_run::$should_run"
+
+      - uses: actions/checkout@v2
+        if: ${{ steps.terraform_changed.outputs.should_run }}
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 5
+
+      - uses: marceloprado/has-changed-path@v1
+        if: ${{ steps.terraform_changed.outputs.should_run }}
+        id: terraform_changed
+        with:
+          paths: terraform
+
+      - uses: marceloprado/has-changed-path@v1
+        if: ${{ steps.terraform_changed.outputs.should_run }}
+        id: code_changed
+        with:
+          paths: api consumers shared/common shared/config
+
+      - run: echo Should run PR based on origin branch? - ${{ steps.should_run.outputs.should_run }}
+      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
+      - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
+
+    outputs:
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      code_changed: ${{ steps.code_changed.outputs.changed }}
+
   tests:
-    if: ${{ env.SHOULD_RUN }}
+    needs: changes
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
     name: 'Tests and Coverage'
     runs-on: ubuntu-latest
     env:
@@ -33,8 +69,32 @@ jobs:
       - run: npx lerna run test:ci
       - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
 
+  lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    name: 'Run ESLint'
+    runs-on: 'ubuntu-latest'
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+
+      - run: lerna bootstrap
+      - name: Build common packages
+        run: lerna run build:common
+      - run: lerna run lint
+
   validate_terraform:
-    if: ${{ env.SHOULD_RUN }}
+    needs: changes
+    if: ${{ needs.changes.outputs.terraform_changed == 'true' }}
     name: 'Validate Terraform Code'
     runs-on: ubuntu-latest
     env:
@@ -66,25 +126,3 @@ jobs:
       - run: terraform init
       - run: terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
       - run: terraform validate
-
-  lint:
-    if: ${{ env.SHOULD_RUN }}
-    name: 'Run ESLint'
-    runs-on: 'ubuntu-latest'
-    env:
-      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-    timeout-minutes: 5
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Cache node_modules
-        uses: actions/cache@v2
-        with:
-          path: '**/node_modules'
-          key: modules-${{ hashFiles('./yarn.lock') }}
-
-      - run: lerna bootstrap
-      - name: Build common packages
-        run: lerna run build:common
-      - run: lerna run lint
