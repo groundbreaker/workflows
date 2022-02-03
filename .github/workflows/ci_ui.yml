@@ -4,8 +4,6 @@ on:
     secrets:
       NPM_AUTH_TOKEN:
         required: true
-      CODECOV_TOKEN:
-        required: true
 
 jobs:
   changes:
