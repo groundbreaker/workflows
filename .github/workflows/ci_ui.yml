@@ -6,7 +6,7 @@ on:
         required: true
 
 jobs:
-  changes:
+  check_branch:
     name: 'Check origin branch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -23,8 +23,8 @@ jobs:
 
   tests:
     name: 'Tests and Coverage'
-    needs: changes
-    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    needs: check_branch
+    if: ${{ needs.check_branch.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
@@ -43,7 +43,7 @@ jobs:
   lint:
     name: 'Run ESLint'
     needs: changes
-    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    if: ${{ needs.check_branch.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
