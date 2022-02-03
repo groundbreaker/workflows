@@ -30,8 +30,6 @@ jobs:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v1
         with:
           node-version: 14
@@ -52,6 +50,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
+      - name: Install Dependencies
+        run: npm ci --no-optional
       - run: yarn lint
