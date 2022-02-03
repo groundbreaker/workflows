@@ -42,7 +42,7 @@ jobs:
 
   lint:
     name: 'Run ESLint'
-    needs: changes
+    needs: check_branch
     if: ${{ needs.check_branch.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     env:
