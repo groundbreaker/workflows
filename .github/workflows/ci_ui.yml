@@ -1,0 +1,59 @@
+name: CI Monorepo
+on:
+  workflow_call:
+    secrets:
+      NPM_AUTH_TOKEN:
+        required: true
+      CODECOV_TOKEN:
+        required: true
+
+jobs:
+  changes:
+    name: 'Check origin branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Only run CI from non-protected branches (avoid CI for backporting)
+      - name: Check origin branch
+        id: should_run
+        run: |
+          should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
+          echo "::set-output name=should_run::$should_run"
+      - run: echo Should run PR based on origin branch? - ${{ steps.should_run.outputs.should_run }}
+    outputs:
+      should_run: ${{ steps.should_run.outputs.should_run }}
+
+  tests:
+    name: 'Tests and Coverage'
+    needs: changes
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
+      - name: Install Dependencies
+        run: npm ci --no-optional
+      - name: Run Tests
+        run: npm run test:coverage
+      - name: Upload Coverage Report (Codecov)
+        run: bash <(curl -s https://codecov.io/bash)
+
+  lint:
+    name: 'Run ESLint'
+    needs: changes
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+        run: yarn lint

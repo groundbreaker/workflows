@@ -32,21 +32,16 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 5
-
       - uses: marceloprado/has-changed-path@v1
         id: terraform_changed
         with:
           paths: terraform
-
       - uses: marceloprado/has-changed-path@v1
         id: code_changed
         with:
           paths: api consumers shared/common shared/config
-
       - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
-
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
-
     outputs:
       terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
       code_changed: ${{ steps.code_changed.outputs.changed }}
@@ -68,14 +63,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.ref_name }}
-
       - uses: hashicorp/setup-terraform@v1
-
       - uses: actions/cache@v2
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -85,7 +77,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
           role-session-name: ${{ inputs.environment }}
-
       - name: Setup SSH Keys and known_hosts
         env:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
@@ -100,7 +91,6 @@ jobs:
           chmod 600 "$SSH_PATH/id_rsa"
           eval $(ssh-agent)
           ssh-add "$SSH_PATH/id_rsa"
-
       - name: Set Short Env
         run: |
           case ${{ inputs.environment }} in
@@ -109,21 +99,15 @@ jobs:
             production) echo "short_env=prod" >> $GITHUB_ENV ;;
             *) echo "Invalid environment" && exit 1 ;;
           esac
-
       - run: lerna bootstrap
-
       - name: Get packages environment variables
         run: lerna run pull-env:${{ env.short_env }}
         continue-on-error: true
-        
       - name: Get shared environment variables
         run: yarn pull-shared-env:${{ env.short_env }}
         continue-on-error: true
-
       - run: terraform init
-
       - run: terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
-
       - run: terraform apply --auto-approve
 
   functions:
@@ -135,13 +119,11 @@ jobs:
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
       AWS_OPS_BUCKET: ${{ secrets.AWS_OPS_BUCKET }}
-
     steps:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 5
-
       - name: Generate and publish release
         if: inputs.environment == 'production'
         uses: release-drafter/release-drafter@v5
@@ -149,13 +131,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
-
       - name: Cache node_modules
         uses: actions/cache@v2
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -165,7 +145,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
           role-session-name: ${{ inputs.environment }}
-
       - name: Set Short Env
         run: |
           case ${{ inputs.environment }} in
@@ -174,14 +153,10 @@ jobs:
             production) echo "short_env=prod" >> $GITHUB_ENV ;;
             *) echo "Invalid environment" && exit 1 ;;
           esac
-
       - run: lerna bootstrap
-      
       - name: Build common packages
         run: lerna run build:common
-
       - name: Build modified packages
         run: lerna run build --since origin/${{ github.ref_name }}~1 --exclude-dependents
-
       - name: Deploy modified packages
         run: lerna run deploy:${{ env.short_env }} --since origin/${{ github.ref_name }}~1 --exclude-dependents
