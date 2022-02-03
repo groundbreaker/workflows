@@ -56,4 +56,4 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.ref_name }}
-        run: yarn lint
+      - run: yarn lint
