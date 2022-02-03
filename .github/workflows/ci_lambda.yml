@@ -29,8 +29,6 @@ jobs:
           echo "::set-output name=should_run::$should_run"
       - uses: actions/checkout@v2
         if: ${{ steps.should_run.outputs.should_run }}
-        with:
-          ref: ${{ github.ref_name }}
           fetch-depth: 5
       - name: Check terraform changes
         uses: marceloprado/has-changed-path@v1
@@ -60,8 +58,6 @@ jobs:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
       - uses: actions/cache@v2
         with:
           path: '**/node_modules'
@@ -81,8 +77,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
       - name: Cache node_modules
         uses: actions/cache@v2
         with:
@@ -107,8 +101,6 @@ jobs:
     timeout-minutes: 2
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
       - uses: hashicorp/setup-terraform@v1
       - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
