@@ -29,7 +29,6 @@ jobs:
           echo "::set-output name=should_run::$should_run"
       - uses: actions/checkout@v2
         if: ${{ steps.should_run.outputs.should_run }}
-          fetch-depth: 5
       - name: Check terraform changes
         uses: marceloprado/has-changed-path@v1
         if: ${{ steps.should_run.outputs.should_run }}
