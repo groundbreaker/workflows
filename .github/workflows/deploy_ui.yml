@@ -34,11 +34,18 @@ jobs:
     name: Build and Deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Set s3 bucket on env
+        run: |
+          case ${{ inputs.environment }} in
+            development) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            release) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            production) echo "s3_full_path=gb-ui-v2/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            *) echo "Invalid environment" && exit 1 ;;
+          esac
       - name: Checkout
         uses: actions/checkout@v2
         with:
           ref: ${{ github.ref_name }}
-
       - name: Generate and publish release
         uses: release-drafter/release-drafter@v5
         if: inputs.environment == 'production'
@@ -46,31 +53,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
-
       - uses: actions/setup-node@v1
         with:
           node-version: 14
-
       - name: Install Dependencies
         run: npm ci --no-optional
-
       - name: Configure AWS Tools Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Pull environment variables
         run: |
           npm run pull-env:ci
           cat .env.${{ inputs.environment }} > .env.production
         env: 
           GROUNDBREAKER_ENVIRONMENT: ${{ inputs.environment }}
-
       - name: Build App
         run: npm run build
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -80,27 +81,15 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
           role-session-name: ${{ inputs.environment }}
-
-      - name: Set s3 bucket on env
-        run: |
-          case ${{ inputs.environment }} in
-            development) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
-            release) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
-            production) echo "s3_full_path=gb-ui-v2/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
-            *) echo "Invalid environment" && exit 1 ;;
-          esac
-
       - name: Deploy
         run: |
           aws s3 rm --recursive s3://${{ env.s3_full_path }}
           aws s3 sync dist s3://${{ env.s3_full_path }}
-
       - name: Add index cache invalidation metadata
         run: |
           aws s3 cp s3://${{ env.s3_full_path }}/index.html s3://${{ env.s3_full_path }}/index.html \
             --metadata-directive REPLACE \
             --cache-control max-age=0 \
             --content-type "text/html"
-
       - name: Invalidate cache
         run: aws cloudfront create-invalidation --distribution-id ${{ inputs.distribution_id }} --paths "/${{ inputs.cf_path }}/*"
