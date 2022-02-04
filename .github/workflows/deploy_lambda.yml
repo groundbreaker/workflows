@@ -150,14 +150,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
           role-session-name: ${{ inputs.environment }}
-      - name: Set Short Env
-        run: |
-          case ${{ inputs.environment }} in
-            development) echo "short_env=dev" >> $GITHUB_ENV ;;
-            release) echo "short_env=release" >> $GITHUB_ENV ;;
-            production) echo "short_env=prod" >> $GITHUB_ENV ;;
-            *) echo "Invalid environment" && exit 1 ;;
-          esac
       - run: lerna bootstrap
       - name: Build common packages
         run: lerna run build:common
