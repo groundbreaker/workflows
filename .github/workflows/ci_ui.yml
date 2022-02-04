@@ -1,4 +1,4 @@
-name: CI Monorepo
+name: CI UI
 on:
   workflow_call:
     secrets:
