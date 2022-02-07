@@ -5,9 +5,10 @@ on:
       environment: # development | release | production
         required: true
         type: string
-      tag: # In case of rollback
+      rollback: # In case of rollback
         required: false
-        type: string
+        default: false
+        type: boolean
 
     secrets:
       GIT_CREDENTIALS:
@@ -32,14 +33,14 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: 'Is rollback?'
-        if: inputs.tag != null
+        if: inputs.rollback
         run: |
           echo "::set-output name=terraform_changed::true"
           echo "::set-output name=code_changed::true"
           exit 0
       - uses: actions/checkout@v2
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 5
       - uses: marceloprado/has-changed-path@v1
         id: terraform_changed
@@ -84,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ github.ref_name }}
       - uses: hashicorp/setup-terraform@v1
       - uses: actions/cache@v2
         with:
@@ -136,10 +137,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 5
       - name: Generate and publish release
-        if: (inputs.environment == 'production') && (inputs.tag == null)
+        if: (inputs.environment == 'production') && !inputs.rollback
         uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -164,15 +165,15 @@ jobs:
         run: lerna run build:common
 
       - name: Build modified packages
-        if: inputs.tag == null
+        if: ${{ !inputs.rollback }}
         run: lerna run build --since origin/${{ github.ref_name }}~1 --exclude-dependents
       - name: Deploy modified packages
-        if: inputs.tag == null
+        if: ${{ !inputs.rollback }}
         run: lerna run deploy:${{ needs.short_env.outputs.short_env }} --since origin/${{ github.ref_name }}~1 --exclude-dependents
 
       - name: Build for rollback
-        if: inputs.tag != null
+        if: inputs.rollback
         run: lerna run build --exclude-dependents
       - name: Deploy for rollback
-        if: inputs.tag != null
+        if: inputs.rollback
         run: lerna run deploy:${{ needs.short_env.outputs.short_env }} --exclude-dependents
