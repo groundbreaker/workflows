@@ -5,6 +5,9 @@ on:
       environment: # development | release | production
         required: true
         type: string
+      tag: # In case of rollback
+        required: false
+        type: string
       portal: # investor | manager
         required: true
         type: string
@@ -45,10 +48,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ inputs.tag || github.ref_name }}
       - name: Generate and publish release
         uses: release-drafter/release-drafter@v5
-        if: inputs.environment == 'production'
+        if: (inputs.environment == 'production') && (inputs.tag == null)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
