@@ -58,6 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set short env
+        id: short_env
         run: |
           case ${{ inputs.environment }} in
             development) echo "::set-output name=short_env::dev" ;;
@@ -66,7 +67,11 @@ jobs:
             *) echo "Invalid environment" && exit 1 ;;
           esac
       - name: Set build since
+        id: build_since
         run: echo "::set-output name=build_since::${{ !inputs.rollback && format('--since origin/{0}~1', github.ref_name) }}"
+    outputs:
+      short_env: ${{ steps.short_env.outputs.short_env }}
+      build_since: ${{ steps.build_since.outputs.build_since || '' }}
 
   terraform:
     name: Terraform
@@ -129,11 +134,11 @@ jobs:
 
   functions:
     name: 'Functions'
-    needs: [changes, terraform, temp_vars]
+    needs: [temp_vars, terraform]
     if: |
       always()
       && (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
-      && (inputs.rollback || needs.changes.outputs.code_changed == 'true')
+      && (inputs.rollback || needs.temp_vars.outputs.code_changed == 'true')
     timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
