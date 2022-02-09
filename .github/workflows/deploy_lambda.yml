@@ -51,11 +51,11 @@ jobs:
       terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
       code_changed: ${{ steps.code_changed.outputs.changed }}
 
-  short_env:
-    name: 'Define Short Env'
+  temp_vars:
+    name: 'Define Temporary Variables'
     runs-on: ubuntu-latest
     steps:
-      - name: Set Short Env
+      - name: Set short env
         run: |
           case ${{ inputs.environment }} in
             development) echo "::set-output name=short_env::dev" ;;
@@ -63,10 +63,12 @@ jobs:
             production) echo "::set-output name=short_env::prod" ;;
             *) echo "Invalid environment" && exit 1 ;;
           esac
+      - name: Set build since
+        run: echo "::set-output name=build_since::${{ !inputs.rollback && format('--since origin/{0}~1', github.ref_name) }}"
 
   terraform:
     name: Terraform
-    needs: [changes, short_env]
+    needs: [changes, temp_vars]
     if: |
       always()
       && (needs.changes.result == 'success' || needs.changes.result == 'skipped')
@@ -114,10 +116,10 @@ jobs:
           ssh-add "$SSH_PATH/id_rsa"
       - run: lerna bootstrap
       - name: Get packages environment variables
-        run: lerna run pull-env:${{ needs.short_env.outputs.short_env }}
+        run: lerna run pull-env:${{ needs.temp_vars.outputs.short_env }}
         continue-on-error: true
       - name: Get shared environment variables
-        run: yarn pull-shared-env:${{ needs.short_env.outputs.short_env }}
+        run: yarn pull-shared-env:${{ needs.temp_vars.outputs.short_env }}
         continue-on-error: true
       - run: terraform init
       - run: terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
@@ -125,7 +127,7 @@ jobs:
 
   functions:
     name: 'Functions'
-    needs: [changes, terraform, short_env]
+    needs: [changes, terraform, temp_vars]
     if: |
       always()
       && (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
@@ -166,15 +168,7 @@ jobs:
         run: lerna run build:common
 
       - name: Build modified packages
-        if: ${{ !inputs.rollback }}
-        run: lerna run build --since origin/${{ github.ref_name }}~1 --exclude-dependents
+        run: lerna run build ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
       - name: Deploy modified packages
         if: ${{ !inputs.rollback }}
-        run: lerna run deploy:${{ needs.short_env.outputs.short_env }} --since origin/${{ github.ref_name }}~1 --exclude-dependents
-
-      - name: Build for rollback
-        if: inputs.rollback
-        run: lerna run build --exclude-dependents
-      - name: Deploy for rollback
-        if: inputs.rollback
-        run: lerna run deploy:${{ needs.short_env.outputs.short_env }} --exclude-dependents
+        run: lerna run deploy:${{ needs.temp_vars.outputs.short_env }} ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
