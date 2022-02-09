@@ -124,11 +124,11 @@ jobs:
 
   functions:
     name: 'Functions'
+    needs: [changes, terraform, short_env]
     if: |
       always()
-      && (terraform.status == 'success' || terraform.status == 'cancelled')
+      && (needs.terraform.status == 'success' || needs.terraform.status == 'cancelled')
       && (inputs.rollback || needs.changes.outputs.code_changed == 'true')
-    needs: [changes, terraform, short_env]
     timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
