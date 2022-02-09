@@ -167,7 +167,7 @@ jobs:
       - name: Build common packages
         run: lerna run build:common
 
-      - name: Build modified packages
+      - name: Build packages
         run: lerna run build ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
-      - name: Deploy modified packages
+      - name: Deploy packages
         run: lerna run deploy:${{ needs.temp_vars.outputs.short_env }} ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
