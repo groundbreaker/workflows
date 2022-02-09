@@ -66,8 +66,10 @@ jobs:
 
   terraform:
     name: Terraform
-    if: ${{  inputs.rollback || needs.changes.outputs.terraform_changed == 'true' }}
     needs: [changes, short_env]
+    if: |
+      always()
+      && (inputs.rollback || needs.changes.outputs.terraform_changed == 'true')
     runs-on: ubuntu-latest
     env:
       tf_actions_working_dir: ./terraform
@@ -122,7 +124,10 @@ jobs:
 
   functions:
     name: 'Functions'
-    if: ${{ inputs.rollback || needs.changes.outputs.code_changed == 'true' }}
+    if: |
+      always()
+      && (terraform.status == 'success' || terraform.status == 'cancelled')
+      && (inputs.rollback || needs.changes.outputs.code_changed == 'true')
     needs: [changes, terraform, short_env]
     timeout-minutes: 5
     runs-on: ubuntu-latest
