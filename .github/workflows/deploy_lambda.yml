@@ -170,5 +170,4 @@ jobs:
       - name: Build modified packages
         run: lerna run build ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
       - name: Deploy modified packages
-        if: ${{ !inputs.rollback }}
         run: lerna run deploy:${{ needs.temp_vars.outputs.short_env }} ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
