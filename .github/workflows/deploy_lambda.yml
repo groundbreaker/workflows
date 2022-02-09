@@ -68,10 +68,10 @@ jobs:
           esac
       - name: Set build since
         id: build_since
-        run: echo "::set-output name=build_since::${{ !inputs.rollback && format('--since origin/{0}~1', github.ref_name) }}"
+        run: echo "::set-output name=build_since::${{ (!inputs.rollback && format('--since origin/{0}~1', github.ref_name)) || '' }}"
     outputs:
       short_env: ${{ steps.short_env.outputs.short_env }}
-      build_since: ${{ steps.build_since.outputs.build_since || '' }}
+      build_since: ${{ steps.build_since.outputs.build_since }}
 
   terraform:
     name: Terraform
