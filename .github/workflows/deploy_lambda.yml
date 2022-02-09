@@ -69,6 +69,7 @@ jobs:
     needs: [changes, short_env]
     if: |
       always()
+      && (needs.changes.result == 'success' || needs.changes.result == 'skipped')
       && (inputs.rollback || needs.changes.outputs.terraform_changed == 'true')
     runs-on: ubuntu-latest
     env:
@@ -127,7 +128,7 @@ jobs:
     needs: [changes, terraform, short_env]
     if: |
       always()
-      && (needs.terraform.status == 'success' || needs.terraform.status == 'cancelled')
+      && (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
       && (inputs.rollback || needs.changes.outputs.code_changed == 'true')
     timeout-minutes: 5
     runs-on: ubuntu-latest
