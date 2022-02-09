@@ -122,12 +122,12 @@ jobs:
           eval $(ssh-agent)
           ssh-add "$SSH_PATH/id_rsa"
       - run: lerna bootstrap
-        continue-on-error: true
       - name: Get packages environment variables
         run: lerna run pull-env:${{ needs.temp_vars.outputs.short_env }}
         continue-on-error: true
       - name: Get shared environment variables
         run: yarn pull-shared-env:${{ needs.temp_vars.outputs.short_env }}
+        continue-on-error: true
       - run: terraform init
       - run: terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
       - run: terraform apply --auto-approve
