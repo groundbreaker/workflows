@@ -46,10 +46,12 @@ jobs:
             production) echo "s3_full_path=gb-ui-v2/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
             *) echo "Invalid environment" && exit 1 ;;
           esac
+
       - name: Checkout
         uses: actions/checkout@v2
         with:
           ref: ${{ github.ref_name }}
+
       - name: Generate and publish release
         uses: release-drafter/release-drafter@v5
         if: (inputs.environment == 'production') && !inputs.rollback
@@ -57,25 +59,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
-      - uses: actions/setup-node@v1
+
+      - uses: actions/setup-node@v2
         with:
           node-version: 14
+          cache: 'yarn'
+
       - name: Install Dependencies
-        run: npm ci --no-optional
+        run: yarn install --frozen-lockfile
+
       - name: Configure AWS Tools Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
       - name: Pull environment variables
         run: |
-          npm run pull-env:ci
+          yarn pull-env:ci
           cat .env.${{ inputs.environment }} > .env.production
-        env: 
+        env:
           GROUNDBREAKER_ENVIRONMENT: ${{ inputs.environment }}
+
       - name: Build App
-        run: npm run build
+        run: yarn build
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -85,15 +94,18 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
           role-session-name: ${{ inputs.environment }}
+
       - name: Deploy
         run: |
           aws s3 rm --recursive s3://${{ env.s3_full_path }}
           aws s3 sync dist s3://${{ env.s3_full_path }}
+
       - name: Add index cache invalidation metadata
         run: |
           aws s3 cp s3://${{ env.s3_full_path }}/index.html s3://${{ env.s3_full_path }}/index.html \
             --metadata-directive REPLACE \
             --cache-control max-age=0 \
             --content-type "text/html"
+
       - name: Invalidate cache
         run: aws cloudfront create-invalidation --distribution-id ${{ inputs.distribution_id }} --paths "/${{ inputs.cf_path }}/*"

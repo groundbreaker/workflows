@@ -94,6 +94,8 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
       - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.11
       - uses: actions/cache@v2
         with:
           path: '**/node_modules'
