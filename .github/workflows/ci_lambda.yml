@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Only run CI from non-protected branches (avoid CI for backporting)
+      # Only run CI from unprotected branches (avoid CI for backporting)
       - name: Check origin branch
         id: should_run
         run: |
