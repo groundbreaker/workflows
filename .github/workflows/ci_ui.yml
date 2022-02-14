@@ -34,6 +34,10 @@ jobs:
         with:
           node-version: 14
           cache: 'yarn'
+      - uses: actions/cache@v2
+        with:
+          path: './node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
       - name: Run Tests
@@ -55,6 +59,10 @@ jobs:
         with:
           node-version: 14
           cache: 'yarn'
+      - uses: actions/cache@v2
+        with:
+          path: './node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
       - run: yarn lint
