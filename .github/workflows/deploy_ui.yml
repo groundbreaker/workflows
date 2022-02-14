@@ -34,7 +34,6 @@ env:
 
 jobs:
   deploy:
-    if: "!contains(github.event.head_commit.message, '[skip-ci]')"
     name: Build and Deploy
     runs-on: ubuntu-latest
     steps:
@@ -98,7 +97,7 @@ jobs:
       - name: Deploy
         run: |
           aws s3 rm --recursive s3://${{ env.s3_full_path }}
-          aws s3 sync dist s3://${{ env.s3_full_path }}
+          aws s3 sync build s3://${{ env.s3_full_path }}
 
       - name: Add index cache invalidation metadata
         run: |
