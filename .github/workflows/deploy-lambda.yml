@@ -48,8 +48,10 @@ jobs:
       - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
     outputs:
-      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      code_changed: ${{ steps.code_changed.outputs.changed }}
+      # terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      # code_changed: ${{ steps.code_changed.outputs.changed }}
+      terraform_changed: true
+      code_changed: true
 
   temp_vars:
     name: 'Define Temporary Variables'
@@ -99,14 +101,16 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        # uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@FA-735
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
-          role-session-name: ${{ inputs.environment }}
+          role-session-name: ci
+          environment: ${{ inputs.environment }}
       - name: Setup SSH Keys and known_hosts
         env:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
@@ -162,18 +166,19 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        # uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@FA-735
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE }}
           role-duration-seconds: 1200
-          role-session-name: ${{ inputs.environment }}
+          role-session-name: ci
+          environment: ${{ inputs.environment }}
       - run: lerna bootstrap
       - name: Build common packages
         run: lerna run build:common
-
       - name: Build packages
         run: lerna run build ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
       - name: Deploy packages
