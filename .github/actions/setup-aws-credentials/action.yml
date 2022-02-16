@@ -19,7 +19,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - run: |
+    - name: Setup
+      shell: bash
+      run: |
         aws configure set aws_access_key_id ${{ inputs.aws-access-key-id }} --profile terraform
         aws configure set aws_secret_access_key ${{ inputs.aws-secret-access-key }} --profile terraform
         aws configure set region ${{ inputs.aws-region }} --profile terraform
