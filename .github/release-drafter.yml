@@ -22,14 +22,17 @@ categories:
       - 'test'
   - title: ':hammer_and_wrench: Refactor'
     labels:
+      - 'refac'
       - 'refact'
       - 'refactor'
   - title: ':notebook: Docs'
     label: 'docs'
   - title: ':robot: Automation'
     labels:
+      - 'auto'
       - 'automation'
       - 'dependencies'
+      - 'deps'
 change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
 version-resolver:
   major:
