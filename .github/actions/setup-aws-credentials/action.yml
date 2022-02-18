@@ -34,4 +34,3 @@ runs:
         aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.environment }}
         aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.environment }}
         aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.environment }}
-        
