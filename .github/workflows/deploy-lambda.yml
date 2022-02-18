@@ -27,6 +27,22 @@ on:
         required: true
 
 jobs:
+  dependencies:
+    name: "Install Dependencies"
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - run: lerna bootstrap
+
   changes:
     name: 'Check Changes'
     if: ${{ !inputs.rollback }}
@@ -73,7 +89,7 @@ jobs:
 
   terraform:
     name: Terraform
-    needs: [changes, temp_vars]
+    needs: [changes, temp_vars, dependencies]
     if: |
       always()
       && (needs.changes.result == 'success' || needs.changes.result == 'skipped')
@@ -122,7 +138,6 @@ jobs:
           chmod 600 "$SSH_PATH/id_rsa"
           eval $(ssh-agent)
           ssh-add "$SSH_PATH/id_rsa"
-      - run: lerna bootstrap
       - name: Get packages environment variables
         run: lerna run pull-env:${{ needs.temp_vars.outputs.short_env }}
         continue-on-error: true
@@ -135,7 +150,7 @@ jobs:
 
   functions:
     name: 'Functions'
-    needs: [changes, temp_vars, terraform]
+    needs: [changes, temp_vars, terraform, dependencies]
     if: |
       always()
       && (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
@@ -172,7 +187,6 @@ jobs:
           role-duration-seconds: 1200
           role-session-name: ci
           environment: ${{ inputs.environment }}
-      - run: lerna bootstrap
       - name: Build common packages
         run: lerna run build:common
       - name: Build packages
