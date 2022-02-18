@@ -1,0 +1,116 @@
+name: Deploy UI
+on:
+  workflow_call:
+    inputs:
+      environment: # development | release | production
+        required: true
+        type: string
+      rollback: # In case of rollback
+        required: false
+        default: false
+        type: boolean
+      portal: # investor | manager
+        required: true
+        type: string
+      cf_path: # Cloudfront Path. i.e: v2/home | v2/settings | etc...
+        required: true
+        type: string
+      distribution_id:
+        required: true
+        type: string
+
+    secrets:
+      NPM_AUTH_TOKEN:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_ROLE:
+        required: true
+
+env:
+  NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set s3 bucket on env
+        run: |
+          case ${{ inputs.environment }} in
+            development) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            release) echo "s3_full_path=dev.gbrkr.com/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            production) echo "s3_full_path=gb-ui-v2/${{ inputs.portal }}/${{ inputs.cf_path }}" >> $GITHUB_ENV ;;
+            *) echo "Invalid environment" && exit 1 ;;
+          esac
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Generate and publish release
+        uses: release-drafter/release-drafter@v5
+        if: (inputs.environment == 'production') && !inputs.rollback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          publish: true
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+          cache: 'yarn'
+
+      - uses: actions/cache@v2
+        with:
+          path: './node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Configure AWS Tools Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Pull environment variables
+        run: |
+          yarn pull-env:ci
+          cat .env.${{ inputs.environment }} > .env.production
+        env:
+          GROUNDBREAKER_ENVIRONMENT: ${{ inputs.environment }}
+
+      - name: Build App
+        run: yarn build
+
+      - name: Setup AWS Credentials
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-duration-seconds: 1200
+          role-session-name: ci
+          environment: ${{ inputs.environment }}
+
+      - name: Deploy
+        run: |
+          aws s3 rm --recursive s3://${{ env.s3_full_path }}
+          aws s3 sync build s3://${{ env.s3_full_path }}
+
+      - name: Add index cache invalidation metadata
+        run: |
+          aws s3 cp s3://${{ env.s3_full_path }}/index.html s3://${{ env.s3_full_path }}/index.html \
+            --metadata-directive REPLACE \
+            --cache-control max-age=0 \
+            --content-type "text/html"
+
+      - name: Invalidate cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ inputs.distribution_id }} --paths "/${{ inputs.cf_path }}/*"

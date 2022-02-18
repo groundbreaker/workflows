@@ -1,0 +1,195 @@
+name: Deploy Lambda Functions
+on:
+  workflow_call:
+    inputs:
+      environment: # development | release | production
+        required: true
+        type: string
+      rollback: # In case of rollback
+        required: false
+        default: false
+        type: boolean
+
+    secrets:
+      GIT_CREDENTIALS:
+        required: true
+      NPM_AUTH_TOKEN:
+        required: true
+      AWS_OPS_BUCKET:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_ROLE:
+        required: true
+      PRIVATE_KEY:
+        required: true
+
+jobs:
+  dependencies:
+    name: "Install Dependencies"
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - run: lerna bootstrap
+
+  changes:
+    name: 'Check Changes'
+    if: ${{ !inputs.rollback }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 5
+      - uses: marceloprado/has-changed-path@v1
+        id: terraform_changed
+        with:
+          paths: terraform
+      - uses: marceloprado/has-changed-path@v1
+        id: code_changed
+        with:
+          paths: api consumers shared/common shared/config
+      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
+      - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
+    outputs:
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      code_changed: ${{ steps.code_changed.outputs.changed }}
+
+  temp_vars:
+    name: 'Define Temporary Variables'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set short env
+        id: short_env
+        run: |
+          case ${{ inputs.environment }} in
+            development) echo "::set-output name=short_env::dev" ;;
+            release) echo "::set-output name=short_env::release" ;;
+            production) echo "::set-output name=short_env::prod" ;;
+            *) echo "Invalid environment" && exit 1 ;;
+          esac
+      - name: Set build since
+        id: build_since
+        run: echo "::set-output name=build_since::${{ (!inputs.rollback && format('--since origin/{0}~1', github.ref_name)) || '' }}"
+    outputs:
+      short_env: ${{ steps.short_env.outputs.short_env }}
+      build_since: ${{ steps.build_since.outputs.build_since }}
+
+  terraform:
+    name: Terraform
+    needs: [changes, temp_vars, dependencies]
+    if: |
+      always()
+      && (needs.changes.result == 'success' || needs.changes.result == 'skipped')
+      && (inputs.rollback || needs.changes.outputs.terraform_changed == 'true')
+    runs-on: ubuntu-latest
+    env:
+      tf_actions_working_dir: ./terraform
+      GITHUB_TOKEN: ${{ secrets.GIT_CREDENTIALS }}
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      AWS_OPS_BUCKET: ${{ secrets.AWS_OPS_BUCKET }}
+    defaults:
+      run:
+        working-directory: ${{ env.tf_actions_working_dir }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.11
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - name: Setup AWS Credentials
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-duration-seconds: 1200
+          role-session-name: ci
+          environment: ${{ inputs.environment }}
+      - name: Setup SSH Keys and known_hosts
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        run: |
+          SSH_PATH="$HOME/.ssh"
+          mkdir -p "$SSH_PATH"
+          touch "$SSH_PATH/known_hosts"
+          echo "$PRIVATE_KEY" > "$SSH_PATH/id_rsa"
+          chmod 700 "$SSH_PATH"
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          chmod 600 "$SSH_PATH/known_hosts"
+          chmod 600 "$SSH_PATH/id_rsa"
+          eval $(ssh-agent)
+          ssh-add "$SSH_PATH/id_rsa"
+      - name: Get packages environment variables
+        run: lerna run pull-env:${{ needs.temp_vars.outputs.short_env }}
+        continue-on-error: true
+      - name: Get shared environment variables
+        run: yarn pull-shared-env:${{ needs.temp_vars.outputs.short_env }}
+        continue-on-error: true
+      - run: terraform init
+      - run: terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+      - run: terraform apply --auto-approve
+
+  functions:
+    name: 'Functions'
+    needs: [changes, temp_vars, terraform, dependencies]
+    if: |
+      always()
+      && (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
+      && (inputs.rollback || needs.changes.outputs.code_changed == 'true')
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      AWS_OPS_BUCKET: ${{ secrets.AWS_OPS_BUCKET }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 5
+      - name: Generate and publish release
+        if: (inputs.environment == 'production') && !inputs.rollback
+        uses: release-drafter/release-drafter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          publish: true
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - name: Setup AWS Credentials
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-duration-seconds: 1200
+          role-session-name: ci
+          environment: ${{ inputs.environment }}
+      - name: Build common packages
+        run: lerna run build:common
+      - name: Build packages
+        run: lerna run build ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents
+      - name: Deploy packages
+        run: lerna run deploy:${{ needs.temp_vars.outputs.short_env }} ${{ needs.temp_vars.outputs.build_since }} --exclude-dependents

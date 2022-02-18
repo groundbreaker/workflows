@@ -1,0 +1,136 @@
+name: CI Monorepo
+on:
+  workflow_call:
+    secrets:
+      NPM_AUTH_TOKEN:
+        required: true
+      CODECOV_TOKEN:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      PRIVATE_KEY:
+        required: true
+      KNOWN_HOSTS:
+        required: true
+
+jobs:
+  dependencies:
+    name: "Install Dependencies"
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - run: lerna bootstrap
+
+  changes:
+    name: 'Check origin branch and code changes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Only run CI from unprotected branches (avoid CI for backporting)
+      - name: Check origin branch
+        id: should_run
+        run: |
+          should_run=${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
+          echo "::set-output name=should_run::$should_run"
+      - uses: actions/checkout@v2
+        if: ${{ steps.should_run.outputs.should_run }}
+      - name: Check terraform changes
+        uses: marceloprado/has-changed-path@v1
+        if: ${{ steps.should_run.outputs.should_run }}
+        id: terraform_changed
+        with:
+          paths: terraform
+      - name: Check code changes
+        uses: marceloprado/has-changed-path@v1
+        if: ${{ steps.should_run.outputs.should_run }}
+        id: code_changed
+        with:
+          paths: api consumers shared/common shared/config
+      - run: echo Should run PR based on origin branch? - ${{ steps.should_run.outputs.should_run }}
+      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
+      - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
+    outputs:
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      code_changed: ${{ steps.code_changed.outputs.changed }}
+
+  tests:
+    name: 'Tests and Coverage'
+    needs: [changes, dependencies]
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - run: lerna run build:common --stream
+      - run: lerna run test:ci
+      - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: 'Run ESLint'
+    needs: [changes, dependencies]
+    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - name: Build common packages
+        run: lerna run build:common
+      - run: lerna run lint
+
+  validate_terraform:
+    name: 'Validate Terraform Code'
+    needs: changes
+    if: ${{ needs.changes.outputs.terraform_changed == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ENVIRONMENT: development
+    defaults:
+      run:
+        working-directory: ./terraform
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.0.11
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Setup SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.PRIVATE_KEY }}
+          name: id_rsa
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          if_key_exists: fail
+      - run: terraform init
+      - run: terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+      - run: terraform validate

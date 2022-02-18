@@ -1,0 +1,36 @@
+name: 'Setup AWS Credentials'
+description: 'Action to setup AWS credentials, profiles and roles'
+inputs:
+  aws-access-key-id:
+    required: true
+  aws-secret-access-key:
+    required: true
+  aws-region:
+    required: true
+  role-to-assume:
+    required: true
+  role-duration-seconds:
+    required: true
+  role-session-name:
+    required: true
+  environment:
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup
+      shell: bash
+      run: |
+        aws configure set aws_access_key_id ${{ inputs.aws-access-key-id }} --profile terraform
+        aws configure set aws_secret_access_key ${{ inputs.aws-secret-access-key }} --profile terraform
+        aws configure set region ${{ inputs.aws-region }} --profile terraform
+        aws_assume=($(aws sts assume-role \
+            --role-arn "${{ inputs.role-to-assume }}" \
+            --role-session-name "${{ inputs.role-session-name }}" \
+            --profile terraform \
+            --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+            --output text))
+        aws configure set aws_access_key_id "${aws_assume[0]}" --profile ${{ inputs.environment }}
+        aws configure set aws_secret_access_key "${aws_assume[1]}" --profile ${{ inputs.environment }}
+        aws configure set aws_session_token "${aws_assume[2]}" --profile ${{ inputs.environment }}
