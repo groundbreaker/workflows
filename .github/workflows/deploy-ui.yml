@@ -90,8 +90,7 @@ jobs:
         run: yarn build
 
       - name: Setup AWS Credentials
-        # uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
-        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@FA-735
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

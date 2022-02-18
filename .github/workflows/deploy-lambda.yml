@@ -48,10 +48,8 @@ jobs:
       - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
     outputs:
-      # terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      # code_changed: ${{ steps.code_changed.outputs.changed }}
-      terraform_changed: true
-      code_changed: true
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      code_changed: ${{ steps.code_changed.outputs.changed }}
 
   temp_vars:
     name: 'Define Temporary Variables'
@@ -101,8 +99,7 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        # uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
-        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@FA-735
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -166,8 +163,7 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        # uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
-        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@FA-735
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

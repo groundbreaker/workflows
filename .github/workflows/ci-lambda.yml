@@ -45,10 +45,8 @@ jobs:
       - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
     outputs:
-      # terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      # code_changed: ${{ steps.code_changed.outputs.changed }}
-      terraform_changed: true
-      code_changed: true
+      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      code_changed: ${{ steps.code_changed.outputs.changed }}
 
   tests:
     name: 'Tests and Coverage'
