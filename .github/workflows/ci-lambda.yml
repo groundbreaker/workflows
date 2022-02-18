@@ -28,7 +28,7 @@ jobs:
         with:
           path: "**/node_modules"
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: yarn bootstrap
+      - run: lerna bootstrap
 
   changes:
     name: 'Check origin branch and code changes'
