@@ -16,6 +16,20 @@ on:
         required: true
 
 jobs:
+  dependencies:
+    name: "Install Dependencies"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - run: yarn bootstrap
+
   changes:
     name: 'Check origin branch and code changes'
     runs-on: ubuntu-latest
@@ -45,12 +59,14 @@ jobs:
       - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
       - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
     outputs:
-      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      code_changed: ${{ steps.code_changed.outputs.changed }}
+      # terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
+      # code_changed: ${{ steps.code_changed.outputs.changed }}
+      terraform_changed: true
+      code_changed: true
 
   tests:
     name: 'Tests and Coverage'
-    needs: changes
+    needs: [changes, dependencies]
     if: ${{ needs.changes.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -62,14 +78,13 @@ jobs:
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: lerna bootstrap
       - run: lerna run build:common --stream
       - run: lerna run test:ci
       - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
 
   lint:
     name: 'Run ESLint'
-    needs: changes
+    needs: [changes, dependencies]
     if: ${{ needs.changes.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -82,7 +97,6 @@ jobs:
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: lerna bootstrap
       - name: Build common packages
         run: lerna run build:common
       - run: lerna run lint
