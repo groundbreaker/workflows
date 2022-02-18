@@ -6,6 +6,23 @@ on:
         required: true
 
 jobs:
+  dependencies:
+    name: "Install Dependencies"
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: modules-${{ hashFiles('./yarn.lock') }}
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
   check_branch:
     name: 'Check origin branch'
     runs-on: ubuntu-latest
@@ -23,7 +40,7 @@ jobs:
 
   tests:
     name: 'Tests and Coverage'
-    needs: check_branch
+    needs: [check_branch, dependencies]
     if: ${{ needs.check_branch.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -38,8 +55,6 @@ jobs:
         with:
           path: './node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - name: Install Dependencies
-        run: yarn install --frozen-lockfile
       - name: Run Tests
         run: yarn test:coverage
       - name: Upload Coverage Report (Codecov)
@@ -47,7 +62,7 @@ jobs:
 
   lint:
     name: 'Run ESLint'
-    needs: check_branch
+    needs: [check_branch, dependencies]
     if: ${{ needs.check_branch.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -63,6 +78,4 @@ jobs:
         with:
           path: './node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - name: Install Dependencies
-        run: yarn install --frozen-lockfile
       - run: yarn lint
