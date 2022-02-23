@@ -2,7 +2,7 @@ name: Generate Release
 on:
   push:
     # branches: [main]
-    branchs: [FA-735]
+    branches: [FA-735]
 
 jobs:
   generate_release:
