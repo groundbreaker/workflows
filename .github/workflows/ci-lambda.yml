@@ -17,7 +17,7 @@ on:
 
 jobs:
   changes:
-    name: Check origin branch and code changes
+    name: Check code changes
     # Only run CI from unprotected branches (avoid CI for backporting)
     if: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
     runs-on: ubuntu-latest
