@@ -6,17 +6,10 @@ on:
         required: true
 
 jobs:
-  # Only run CI from unprotected branches (avoid CI for backporting)
-  check_branch:
-    name: Check origin branch
-    if: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo Should run CI based on origin branch? - ${{ steps.should_run.outputs.should_run }}
-
   dependencies:
     name: Install dependencies
-    needs: check_branch
+    # Only run CI from unprotected branches (avoid CI for backporting)
+    if: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
