@@ -18,6 +18,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
+          commitish: FA-735
 
       - name: Update major related tag
         uses: haya14busa/action-update-semver@v1
