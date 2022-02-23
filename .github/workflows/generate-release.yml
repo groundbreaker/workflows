@@ -1,8 +1,7 @@
 name: Generate Release
 on:
   push:
-    # branches: [main]
-    branches: [FA-735]
+    branches: [main]
 
 jobs:
   generate_release:
@@ -18,7 +17,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
-          commitish: FA-735
+          commitish: main
 
       - name: Update major related tag
         uses: haya14busa/action-update-semver@v1
