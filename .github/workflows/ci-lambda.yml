@@ -16,41 +16,15 @@ on:
         required: true
 
 jobs:
-  changes:
-    name: Check code changes
-    # Only run CI from unprotected branches (avoid CI for backporting)
-    if: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v2
-      - name: Check terraform changes
-        uses: marceloprado/has-changed-path@v1
-        id: terraform_changed
-        with:
-          paths: terraform
-      - name: Check code changes
-        uses: marceloprado/has-changed-path@v1
-        id: code_changed
-        with:
-          paths: api consumers shared/common shared/config
-      - run: echo Has any TF code been updated? - ${{ steps.terraform_changed.outputs.changed }}
-      - run: echo Has any code been updated? - ${{ steps.code_changed.outputs.changed }}
-    outputs:
-      terraform_changed: ${{ steps.terraform_changed.outputs.changed }}
-      code_changed: ${{ steps.code_changed.outputs.changed }}
-
   dependencies:
     name: Install dependencies
-    needs: changes
-    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    # Only run CI from unprotected branches (avoid CI for backporting)
+    if: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
@@ -60,8 +34,7 @@ jobs:
 
   tests:
     name: Tests and coverage
-    needs: [changes, dependencies]
-    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    needs: dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -78,8 +51,7 @@ jobs:
 
   lint:
     name: Run ESLint
-    needs: [changes, dependencies]
-    if: ${{ needs.changes.outputs.code_changed == 'true' }}
+    needs: dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -97,7 +69,7 @@ jobs:
 
   build:
     name: Build packages
-    needs: [changes, dependencies]
+    needs: dependencies
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
@@ -115,8 +87,6 @@ jobs:
 
   validate_terraform:
     name: Validate terraform code
-    needs: changes
-    if: ${{ needs.changes.outputs.terraform_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -15,8 +15,6 @@ jobs:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
