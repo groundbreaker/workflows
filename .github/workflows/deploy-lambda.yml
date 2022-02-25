@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          ref: ${{ github.ref_name }}
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
@@ -172,6 +172,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
+          commitish: main
       - name: Cache node_modules
         uses: actions/cache@v2
         with:

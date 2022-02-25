@@ -58,6 +58,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           publish: true
+          commitish: main
 
       - uses: actions/setup-node@v2
         with:
