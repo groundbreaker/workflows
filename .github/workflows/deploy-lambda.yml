@@ -28,7 +28,7 @@ on:
 
 jobs:
   dependencies:
-    name: "Install Dependencies"
+    name: Install Dependencies
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
@@ -44,7 +44,7 @@ jobs:
       - run: lerna bootstrap
 
   changes:
-    name: 'Check Changes'
+    name: Check Changes
     if: ${{ !inputs.rollback }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -68,7 +68,7 @@ jobs:
       code_changed: ${{ steps.code_changed.outputs.changed }}
 
   temp_vars:
-    name: 'Define Temporary Variables'
+    name: Define Temporary Variables
     runs-on: ubuntu-latest
     steps:
       - name: Set short env
@@ -149,7 +149,7 @@ jobs:
       - run: terraform apply --auto-approve
 
   functions:
-    name: 'Functions'
+    name: Functions
     needs: [changes, temp_vars, terraform, dependencies]
     if: |
       always()
