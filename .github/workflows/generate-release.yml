@@ -5,7 +5,7 @@ on:
 
 jobs:
   generate_release:
-    name: Generate and publish release
+    name: Generate and Publish Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -19,7 +19,7 @@ jobs:
           publish: true
           commitish: main
 
-      - name: Update major related tag
+      - name: Update Major Related Tag
         uses: haya14busa/action-update-semver@v1
         with:
           tag: ${{ steps.release_drafter.outputs.tag_name }}

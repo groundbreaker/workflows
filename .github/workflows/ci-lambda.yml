@@ -17,7 +17,7 @@ on:
 
 jobs:
   dependencies:
-    name: Install dependencies
+    name: Install Dependencies
     # Only run CI from unprotected branches (avoid CI for backporting)
     if: ${{ (github.head_ref != 'main') && (github.head_ref != 'develop') && !startsWith(github.head_ref, 'release') }}
     runs-on: ubuntu-latest
@@ -33,7 +33,7 @@ jobs:
       - run: lerna bootstrap
 
   tests:
-    name: Tests and coverage
+    name: Tests and Coverage
     needs: dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -68,7 +68,7 @@ jobs:
       - run: lerna run lint
 
   build:
-    name: Build packages
+    name: Build Packages
     needs: dependencies
     runs-on: ubuntu-latest
     env:
@@ -86,7 +86,7 @@ jobs:
         run: lerna run build --exclude-dependents
 
   validate_terraform:
-    name: Validate terraform code
+    name: Validate Terraform Code
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
