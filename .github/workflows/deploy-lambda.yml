@@ -115,7 +115,7 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -179,7 +179,7 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@main
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
