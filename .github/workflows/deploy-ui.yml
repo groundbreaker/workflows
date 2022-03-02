@@ -90,7 +90,7 @@ jobs:
       - name: Build App
         run: yarn build
 
-      - name: Configure AWS Development credentials
+      - name: Setup AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
