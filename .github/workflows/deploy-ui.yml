@@ -85,7 +85,9 @@ jobs:
           GROUNDBREAKER_ENVIRONMENT: ${{ inputs.environment }}
         run: |
           yarn pull-env:ci
-          cat .env.${{ inputs.environment }} > .env.production
+        
+      - if: ${{ inputs.environment != 'production' }}
+        run: cat .env.${{ inputs.environment }} > .env.production
 
       - name: Build App
         run: yarn build
