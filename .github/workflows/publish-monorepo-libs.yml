@@ -1,11 +1,9 @@
-# On pushing to master: Run tests, bump the version number,
-# deploy and release.
 name: Publish Monorepo Libs
 
 on:
   workflow_call:
     inputs:
-      lib_path: # development | release | production
+      lib_path:
         required: true
         type: string
 
