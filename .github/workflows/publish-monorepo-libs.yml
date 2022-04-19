@@ -1,0 +1,43 @@
+name: Publish Monorepo Libs
+
+on:
+  workflow_call:
+    inputs:
+      lib_path:
+        required: true
+        type: string
+
+    secrets:
+      NPM_AUTH_TOKEN:
+        required: true
+
+jobs:
+  build-and-publish:
+    name: Build and Publish new version
+    runs-on: ubuntu-latest
+    env:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+          registry-url: https://npm.pkg.github.com/
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ${{ inputs.lib_path }}
+      - name: Build and lint
+        run: yarn build:common
+        working-directory: ${{ inputs.lib_path }}
+      - name: Automated Version Bump
+        uses: phips28/gh-action-bump-version@v8.0.12
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGEJSON_DIR: ${{ inputs.lib_path }}
+      - name: Publish
+        run: yarn publish
+        working-directory: ${{ inputs.lib_path }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
