@@ -35,6 +35,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PACKAGEJSON_DIR: ${{ inputs.lib_path }}
+        with:
+          commit-message: 'CI: bumps version to {{version}} [skip ci]'
       - name: Publish
         run: yarn publish
         working-directory: ${{ inputs.lib_path }}
