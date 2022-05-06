@@ -22,6 +22,10 @@ on:
         default: 'build'
         required: false
         type: string
+      nx:
+        default: false
+        required: false
+        type: boolean
 
     secrets:
       NPM_AUTH_TOKEN:
@@ -92,6 +96,11 @@ jobs:
         
       - if: ${{ inputs.environment != 'production' }}
         run: cat .env.${{ inputs.environment }} > .env.production
+
+      - if: ${{ inputs.nx }}
+        run: |
+          cat .env.${{ inputs.environment }} > .env
+          sed -i -e 's/REACT_APP_/MX_/g' .env
 
       - name: Build App
         run: yarn build
