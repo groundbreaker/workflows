@@ -18,6 +18,14 @@ on:
       distribution_id:
         required: true
         type: string
+      build_path:
+        default: 'build'
+        required: false
+        type: string
+      nx:
+        default: false
+        required: false
+        type: boolean
 
     secrets:
       NPM_AUTH_TOKEN:
@@ -89,6 +97,11 @@ jobs:
       - if: ${{ inputs.environment != 'production' }}
         run: cat .env.${{ inputs.environment }} > .env.production
 
+      - if: ${{ inputs.nx }}
+        run: |
+          cat .env.${{ inputs.environment }} > .env
+          sed -i -e 's/REACT_APP_/MX_/g' .env
+
       - name: Build App
         run: yarn build
 
@@ -105,7 +118,7 @@ jobs:
       - name: Deploy
         run: |
           aws s3 rm --recursive s3://${{ env.s3_full_path }}
-          aws s3 sync build s3://${{ env.s3_full_path }}
+          aws s3 sync ${{ inputs.build_path }} s3://${{ env.s3_full_path }}
 
       - name: Add index cache invalidation metadata
         run: |
