@@ -18,6 +18,10 @@ on:
       distribution_id:
         required: true
         type: string
+      build_path:
+        default: 'build'
+        required: false
+        type: string
 
     secrets:
       NPM_AUTH_TOKEN:
@@ -105,7 +109,7 @@ jobs:
       - name: Deploy
         run: |
           aws s3 rm --recursive s3://${{ env.s3_full_path }}
-          aws s3 sync build s3://${{ env.s3_full_path }}
+          aws s3 sync ${{ inputs.build_path }} s3://${{ env.s3_full_path }}
 
       - name: Add index cache invalidation metadata
         run: |
