@@ -100,7 +100,7 @@ jobs:
       - if: ${{ inputs.nx }}
         run: |
           cat .env.${{ inputs.environment }} > .env
-          sed -i -e 's/REACT_APP_/MX_/g' .env
+          sed -i -e 's/REACT_APP_/NX_/g' .env
 
       - name: Build App
         run: yarn build
