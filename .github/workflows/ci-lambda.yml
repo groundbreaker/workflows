@@ -26,7 +26,7 @@ jobs:
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
-          path: "**/node_modules"
+          path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - run: lerna bootstrap
 
@@ -71,6 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      ENVIRONMENT: development
     steps:
       - uses: actions/checkout@v2
       - name: Cache node_modules
@@ -78,6 +79,12 @@ jobs:
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
+      - name: Setup AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
       - name: Build common packages
         run: lerna run build:common
       - name: Build packages
