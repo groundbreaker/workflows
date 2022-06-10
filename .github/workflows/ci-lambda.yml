@@ -14,6 +14,8 @@ on:
         required: true
       KNOWN_HOSTS:
         required: true
+      AWS_ROLE:
+        required: false
 
 jobs:
   dependencies:
