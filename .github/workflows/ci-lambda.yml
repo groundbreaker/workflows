@@ -14,6 +14,8 @@ on:
         required: true
       KNOWN_HOSTS:
         required: true
+      AWS_ROLE:
+        required: false
 
 jobs:
   dependencies:
@@ -72,6 +74,7 @@ jobs:
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
       ENVIRONMENT: development
+      AWS_OPS_BUCKET: ${{ secrets.AWS_OPS_BUCKET }}
     steps:
       - uses: actions/checkout@v2
       - name: Cache node_modules
@@ -80,11 +83,16 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: groundbreaker/workflows/.github/actions/setup-aws-credentials@v1
+        continue-on-error: true
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-duration-seconds: 1200
+          role-session-name: ci
+          environment: development
       - name: Build common packages
         run: lerna run build:common
       - name: Build packages
