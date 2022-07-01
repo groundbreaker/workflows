@@ -30,7 +30,7 @@ jobs:
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: lerna bootstrap
+      - run: lerna bootstrap --force-local
 
   tests:
     name: Tests and Coverage
