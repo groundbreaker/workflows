@@ -41,7 +41,7 @@ jobs:
         with:
           path: "**/node_modules"
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: lerna bootstrap
+      - run: yarn install
 
   changes:
     name: Check Changes
