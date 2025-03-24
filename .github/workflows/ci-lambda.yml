@@ -45,8 +45,9 @@ jobs:
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: lerna run build:common
-      - run: lerna run test:ci
+      - run: yarn lerna run build:common
+      - name: Run tests with coverage
+        run: yarn lerna run test:ci
       - run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
 
   lint:
@@ -64,8 +65,8 @@ jobs:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
       - name: Build common packages
-        run: lerna run build:common
-      - run: lerna run lint
+        run: yarn lerna run build:common
+      - run: yarn lerna run lint
 
   build:
     name: Build Packages
@@ -94,9 +95,9 @@ jobs:
           role-session-name: ci
           environment: development
       - name: Build common packages
-        run: lerna run build:common
+        run: yarn lerna run build:common
       - name: Build packages
-        run: lerna run build --exclude-dependents
+        run: yarn lerna run build --exclude-dependents
 
   validate_terraform:
     name: Validate Terraform Code
@@ -114,7 +115,7 @@ jobs:
         with:
           terraform_version: 1.2.1
       - name: Setup AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
