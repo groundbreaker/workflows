@@ -24,13 +24,13 @@ jobs:
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
-      - run: lerna bootstrap
+      - run: yarn install
 
   tests:
     name: Tests and Coverage
@@ -40,8 +40,8 @@ jobs:
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
@@ -57,9 +57,9 @@ jobs:
     env:
       NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
@@ -76,9 +76,9 @@ jobs:
       ENVIRONMENT: development
       AWS_OPS_BUCKET: ${{ secrets.AWS_OPS_BUCKET }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: '**/node_modules'
           key: modules-${{ hashFiles('./yarn.lock') }}
@@ -109,7 +109,7 @@ jobs:
         working-directory: ./terraform
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: 1.2.1
